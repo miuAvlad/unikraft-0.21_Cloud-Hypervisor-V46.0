@@ -34,7 +34,11 @@
 extern "C" {
 #endif /* __cplusplus __ */
 
-/* Legacy virtio config space layout */
+/*
+ * Legacy virtio config space layout. Cloud Hypervisor compatibility adds
+ * the modern capability-based layout in virtio_pci.c while retaining these
+ * offsets for transitional devices used by other VMMs.
+ */
 #define VIRTIO_PCI_HOST_FEATURES        0    /* 32-bit r/o */
 #define VIRTIO_PCI_GUEST_FEATURES       4    /* 32-bit r/w */
 #define VIRTIO_PCI_QUEUE_PFN            8    /* 32-bit r/w */

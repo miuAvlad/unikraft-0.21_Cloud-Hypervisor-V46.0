@@ -1028,6 +1028,8 @@ static int virtio_netdev_probe(struct uk_netdev *n)
 	/**
 	 * Gratuitous ARP
 	 * NOTE: We tell that we will do gratuitous ARPs ourselves.
+	 * Cloud Hypervisor compatibility: never acknowledge a feature that the
+	 * host did not advertise.
 	 */
 	if (VIRTIO_FEATURE_HAS(host_features, VIRTIO_NET_F_GUEST_ANNOUNCE))
 		VIRTIO_FEATURE_SET(drv_features, VIRTIO_NET_F_GUEST_ANNOUNCE);
@@ -1155,6 +1157,7 @@ static int virtio_netdev_feature_negotiate(struct uk_netdev *n,
 			  UK_NETDEV_HWADDR_LEN, 1);
 
 	if (VIRTIO_FEATURE_HAS(vndev->vdev->features, VIRTIO_NET_F_MTU)) {
+		/* Cloud Hypervisor compatibility: read MTU from its own config field. */
 		virtio_config_get(vndev->vdev,
 				  __offsetof(struct virtio_net_config, mtu),
 				  &vndev->mtu, sizeof(vndev->mtu), 1);

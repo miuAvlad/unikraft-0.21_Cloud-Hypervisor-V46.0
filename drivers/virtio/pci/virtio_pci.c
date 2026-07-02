@@ -48,6 +48,10 @@
 #define VIRTIO_PCI_MODERN_DEVICEID_START (0x1040)
 #define VIRTIO_PCI_MODERN_DEVICEID_END   (0x107f)
 
+/*
+ * Cloud Hypervisor compatibility: modern virtio-pci devices expose their
+ * transport regions through vendor-specific PCI capabilities and use MSI-X.
+ */
 #define PCI_STATUS_CAP_LIST              0x10
 #define PCI_CAP_ID_VNDR                  0x09
 #define PCI_CAP_ID_MSIX                  0x11
@@ -178,6 +182,10 @@ static struct virtio_config_ops vpci_legacy_ops = {
 	.vq_release   = vpci_legacy_vq_release,
 };
 
+/*
+ * Cloud Hypervisor compatibility: transport operations for modern
+ * virtio-pci. The original legacy operation table above remains unchanged.
+ */
 static void vpci_modern_pci_dev_reset(struct virtio_dev *vdev);
 static int vpci_modern_pci_config_set(struct virtio_dev *vdev, __u16 offset,
 				      const void *buf, __u32 len);
@@ -300,7 +308,10 @@ static int vpci_modern_enable_msix(struct virtio_pci_dev *vpdev)
 		return rc;
 	}
 
-	/* Program vector 0 for fixed delivery to bootstrap APIC ID 0. */
+	/*
+	 * Cloud Hypervisor compatibility: route modern virtio interrupts through
+	 * MSI-X vector 0 to the bootstrap processor's local APIC.
+	 */
 	virtio_mmio_cwrite32(vpdev->msix_table,
 			     PCI_MSIX_ENTRY_VECTOR_CTRL,
 			     PCI_MSIX_ENTRY_MASKED);
@@ -331,6 +342,7 @@ static int vpci_modern_notify(struct virtio_dev *vdev, __u16 queue_id)
 	__u16 notify_offset;
 	void *queue_notify;
 
+	/* Modern devices notify each queue through its capability-derived doorbell. */
 	virtio_mmio_cwrite16(vpdev->common_cfg, VIRTIO_PCI_COMMON_QSELECT,
 			      queue_id);
 	notify_offset = virtio_mmio_cread16(vpdev->common_cfg,
@@ -652,6 +664,7 @@ static __u64 vpci_modern_pci_features_get(struct virtio_dev *vdev)
 	struct virtio_pci_dev *vpdev = to_virtiopcidev(vdev);
 	__u64 features;
 
+	/* Modern virtio splits the 64-bit feature bitmap into two 32-bit pages. */
 	virtio_mmio_cwrite32(vpdev->common_cfg, VIRTIO_PCI_COMMON_DFSELECT, 0);
 	features = virtio_mmio_cread32(vpdev->common_cfg, VIRTIO_PCI_COMMON_DF);
 	virtio_mmio_cwrite32(vpdev->common_cfg, VIRTIO_PCI_COMMON_DFSELECT, 1);
@@ -725,6 +738,10 @@ static struct virtqueue *vpci_modern_vq_setup(struct virtio_dev *vdev,
 			      num_desc);
 	virtio_mmio_cwrite16(vpdev->common_cfg, VIRTIO_PCI_COMMON_QMSIX, 0);
 
+	/*
+	 * Cloud Hypervisor compatibility: publish the three split-ring physical
+	 * addresses separately, as required by the modern common configuration.
+	 */
 	addr = virtqueue_physaddr(vq);
 	vpci_modern_write64(vpdev->common_cfg, VIRTIO_PCI_COMMON_QDESC, addr);
 	addr = virtqueue_get_avail_addr(vq);
@@ -816,6 +833,10 @@ static int virtio_pci_modern_add_dev(struct pci_device *pci_dev,
 	if (!(vpci_config_read16(pci_dev, 0x06) & PCI_STATUS_CAP_LIST))
 		return -ENODEV;
 
+	/*
+	 * Cloud Hypervisor compatibility: discover common, notify, ISR, device and
+	 * MSI-X regions instead of relying on the legacy PCI I/O BAR layout.
+	 */
 	capability = vpci_config_read8(pci_dev, 0x34) & ~3U;
 	while (capability && remaining--) {
 		__u8 cap_id = vpci_config_read8(pci_dev, capability);
@@ -921,6 +942,7 @@ static int virtio_pci_add_dev(struct pci_device *pci_dev)
 	vpci_dev->pdev = pci_dev;
 	vpci_dev->pci_base_addr = pci_dev->base;
 
+	/* Preserve the legacy path for transitional QEMU and Firecracker devices. */
 	if (pci_dev->id.device_id >= VIRTIO_PCI_MODERN_DEVICEID_START)
 		rc = virtio_pci_modern_add_dev(pci_dev, vpci_dev);
 	else
