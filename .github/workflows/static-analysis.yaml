@@ -32,7 +32,7 @@ jobs:
             -f description="Running static analysis..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'staging' }}
           submodules: recursive
@@ -44,7 +44,7 @@ jobs:
           version: '21'
 
       - name: "Fetch elfloader"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: unikraft/app-elfloader
           fetch-depth: 1
