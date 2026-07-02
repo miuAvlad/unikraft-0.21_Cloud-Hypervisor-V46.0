@@ -35,6 +35,7 @@ if (PLAT_KVM)
 
 choice
 	prompt "Boot protocol"
+	default KVM_BOOT_PROTO_PVH if KVM_VMM_CLOUDHYPERVISOR
 	default KVM_BOOT_PROTO_LXBOOT
 
 config KVM_BOOT_PROTO_MULTIBOOT
@@ -48,6 +49,12 @@ config KVM_BOOT_PROTO_LXBOOT
 	depends on KVM_VMM_FIRECRACKER || (KVM_VMM_QEMU && ARCH_ARM_64)
 	help
 		Linux 64-bit Boot Protocol
+
+config KVM_BOOT_PROTO_PVH
+	bool "PVH"
+	depends on KVM_VMM_CLOUDHYPERVISOR && ARCH_X86_64
+	help
+		PVH boot protocol used by Cloud Hypervisor on x86_64
 
 config KVM_BOOT_PROTO_QEMU_VIRT
 	bool "QEMU virt"
@@ -132,6 +139,17 @@ config KVM_VMM_FIRECRACKER
 	imply LIBUKINTCTLR_GICV3 if ARCH_ARM_64
 	imply LIBUKRTC_PL031
 	depends on ARCH_X86_64 || ARCH_ARM_64
+
+config KVM_VMM_CLOUDHYPERVISOR
+	bool "Cloud Hypervisor"
+	depends on ARCH_X86_64
+	select KVM_BOOT_PROTO_PVH
+	select HAVE_IBMPC_NS16550
+	select HAVE_PCI
+	select LIBUKINTCTLR_APIC
+	imply LIBNS16550 if LIBUKCONSOLE
+	imply LIBNS16550_EARLY_CONSOLE if LIBUKCONSOLE
+	imply LIBNS16550_COM1 if LIBUKCONSOLE
 
 endchoice
 endif

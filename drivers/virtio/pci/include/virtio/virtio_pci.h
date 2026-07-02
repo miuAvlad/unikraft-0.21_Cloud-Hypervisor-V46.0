@@ -34,8 +34,7 @@
 extern "C" {
 #endif /* __cplusplus __ */
 
-/* virtio config space layout */
-/* TODO we currently support only the legacy interface */
+/* Legacy virtio config space layout */
 #define VIRTIO_PCI_HOST_FEATURES        0    /* 32-bit r/o */
 #define VIRTIO_PCI_GUEST_FEATURES       4    /* 32-bit r/w */
 #define VIRTIO_PCI_QUEUE_PFN            8    /* 32-bit r/w */
